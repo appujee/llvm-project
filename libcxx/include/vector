@@ -310,6 +310,8 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_trivially_copy_assignable.h>
+#include <__type_traits/is_trivially_copy_constructible.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
@@ -1028,7 +1030,18 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n)
 {
   _ConstructTransaction __tx(*this, __n);
+#if _LIBCPP_STD_VER >= 17
+    using _RawType = __remove_const_t<_Tp>;
+    if constexpr(is_trivially_copy_constructible<_RawType>::value && is_trivially_copy_assignable<_RawType>::value &&
+              __allocator_has_trivial_copy_construct<_Allocator, _RawType>::value &&
+              is_same<pointer, _ForwardIterator>::value)
+      __tx.__pos_ = std::__uninitialized_allocator_copy_opt(__alloc(), __first, __last, __tx.__pos_);
+    else
+      __tx.__pos_ = std::__uninitialized_allocator_copy(__alloc(), __first, __last, __tx.__pos_);
+
+#else
   __tx.__pos_ = std::__uninitialized_allocator_copy(__alloc(), __first, __last, __tx.__pos_);
+#endif
 }
 
 //  Default constructs __n objects starting at __end_
