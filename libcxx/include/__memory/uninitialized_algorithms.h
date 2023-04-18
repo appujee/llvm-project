@@ -586,6 +586,50 @@ __uninitialized_allocator_copy(_Alloc&, const _Type* __first1, const _Type* __la
   }
 }
 
+template <class _Alloc,
+          class _Type,
+          class _RawType = __remove_const_t<_Type>,
+          __enable_if_t<
+              // using _RawType because of the allocator<T const> extension
+              is_trivially_copy_constructible<_RawType>::value && is_trivially_copy_assignable<_RawType>::value &&
+              __allocator_has_trivial_copy_construct<_Alloc, _RawType>::value>* = nullptr>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Type*
+__uninitialized_allocator_copy_opt(_Alloc&, const _Type* __first1, const _Type* __last1, _Type* __first2) {
+  // TODO: Remove the const_cast once we drop support for std::allocator<T const>
+  if (__libcpp_is_constant_evaluated()) {
+    while (__first1 != __last1) {
+      std::__construct_at(std::__to_address(__first2), *__first1);
+      ++__first1;
+      ++__first2;
+    }
+    return __first2;
+  } else {
+    return std::copy(__first1, __last1, const_cast<_RawType*>(__first2));
+  }
+}
+
+template <class _Alloc,
+          class _Type,
+          class _RawType = __remove_const_t<_Type>,
+          __enable_if_t<
+              // using _RawType because of the allocator<T const> extension
+              is_trivially_copy_constructible<_RawType>::value && is_trivially_copy_assignable<_RawType>::value &&
+              __allocator_has_trivial_copy_construct<_Alloc, _RawType>::value>* = nullptr>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Type*
+__uninitialized_allocator_copy_opt(_Alloc&, _Type* __first1, _Type* __last1, _Type* __first2) {
+  // TODO: Remove the const_cast once we drop support for std::allocator<T const>
+  if (__libcpp_is_constant_evaluated()) {
+    while (__first1 != __last1) {
+      std::__construct_at(std::__to_address(__first2), *__first1);
+      ++__first1;
+      ++__first2;
+    }
+    return __first2;
+  } else {
+    return std::copy(__first1, __last1, const_cast<_RawType*>(__first2));
+  }
+}
+
 // Move-construct the elements [__first1, __last1) into [__first2, __first2 + N)
 // if the move constructor is noexcept, where N is distance(__first1, __last1).
 //
